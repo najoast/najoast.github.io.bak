@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>工作日报生成器</title>
+    <link rel="stylesheet" href="static/css/base.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@latest/dist/jsoneditor.min.js"></script>
+</head>
+
+<body>
+<div class="container">
+    <h1>使用说明</h1>
+    <p>
+        <ol>
+            <li>使用 <a href="https://xindong.atlassian.net/wiki/spaces/~zhouyan.XD/pages/338395186/Chrome+Jira">这个插件</a> 复制 Jira 单号和标题</li>
+            <li>分别贴到【上个工作日】和【今天】栏里（多个工作可以点击+号增加）</li>
+            <li>如果没有 Jira 单，直接输入工作描述也是可以的</li>
+            <li>点击生成后，会生成 markdown 格式的报告，贴到 Slack 后，按一下 <code>Ctrl+Shift+F</code> 即可格式化</li>
+        </ol>
+    </p>
+    <div id='editor_holder'></div>
+    <p>
+        <input type="button" value="生成" onclick="generate()">
+        <input type="button" value="复制结果" onclick="copyResult()">
+    </p>
+    <textarea id="output" name="output" rows="16" cols="148"></textarea>
+</div>
+
+<script>
+    var editor = new JSONEditor(document.getElementById('editor_holder'),{
+        use_name_attributes: false,
+        theme: 'bootstrap4',
+        disable_edit_json: true,
+        disable_properties: true,
+        disable_collapse: true,
+        schema: {
+          type: "object",
+          title: "工作内容",
+          properties: {
+            lastWorkDay: {
+              type: "array",
+              title: "上个工作日工作内容 (至少一项)",
+              items: {
+                type: "string",
+                title: "工作"
+              },
+              default: [""],
+            },
+            today: {
+              type: "array",
+              title: "今天将要做的工作 (至少一项)",
+              items: {
+                type: "string",
+                title: "今日工作"
+              },
+              default: [""],
+            },
+            block: {
+              type: "array",
+              title: "是否遇到阻断? (可选)",
+              items: {
+                type: "string",
+                title: "阻断"
+              }
+            },
+          }
+        },
+      });
+
+    function generate() {
+        const value = editor.getValue();
+        let s = genOne("上个工作日", value.lastWorkDay, 1);
+        s += genOne("今天", value.today, 1);
+        s += genOne("阻断", value.block, 0);
+        document.getElementById('output').value = s;
+    }
+    function genOne(title, data, min) {
+        if (data.length == 0) {
+            return '';
+        }
+        if (data.length < min) {
+            throw `${title}至少要有${min}项`;
+        }
+        let s = `*${title}：*\n`;
+        for (let i=0; i<data.length; ++i) {
+            const item = data[i];
+            const index = item.indexOf("http");
+            if (index == -1) {
+                s += `${i+1}. ${item}\n`;
+            } else {
+                s += `${i+1}. [${item.slice(0,index)}](${item.slice(index)})\n`;
+            }
+        }
+        return s + '\n';
+    }
+
+    function copyResult() {
+        let textarea = document.getElementById("output");
+        textarea.select();
+        document.execCommand("copy");
+    }
+</script>
+</body>
+
+</html>
