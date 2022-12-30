@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>MessagePack 反序列化</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+        <script crossorigin src="https://unpkg.com/@msgpack/msgpack"></script>
+        <script>
+            function msgpack_decode() {
+                reset_output();
+                // input is escaped hex string, convert it to Uint8Array
+                let input = document.getElementById("input").value;
+                console.log(input);
+
+                // 遍历字符串，如果是 \x 开头的，就把后面两个字符转为数字，然后 push 到 bytes 里，否则就 push 原字符
+                let bytes = [];
+                for (let i = 0; i < input.length; i++) {
+                    if (input[i] === '\\') {
+                        if (input[i + 1] === 'x') {
+                            bytes.push(parseInt(input[i + 2] + input[i + 3], 16));
+                            i += 3;
+                        // } else {
+                        //     pass; // 以 \ 开头，但不是 \x 开头，就不处理
+                        }
+                    } else {
+                        bytes.push(input[i].charCodeAt(0));
+                    }
+                }
+                console.log(new Uint8Array(bytes));
+
+                try {
+                    const result = MessagePack.decode(new Uint8Array(bytes));
+                    console.log("Result: ", result);
+                    document.getElementById("output").value = JSON.stringify(result, null, 4);
+                } catch (e) {
+                    console.log(e);
+                    // 以红字显示错误信息
+                    document.getElementById("output").style.color = "red";
+                    document.getElementById("output").value = e;
+                }
+            }
+
+            function clear_content() {
+                document.getElementById("input").value = "";
+                document.getElementById("output").value = "";
+            }
+
+            function reset_output() {
+                document.getElementById("output").style.color = "black";
+                document.getElementById("output").value = "";
+            }
+        </script>
+    </head>
+    <body>
+        <div class="container" style="max-width: 500px;padding-top: 20px">
+            <p>
+                使用说明：
+                <ul>
+                    <li>把 msgpack 序列化后的二进制数据放入输入栏，点击反序列化，即可转为json</li>
+                    <li>如果输出结果过大，不方便查看，可以按F12在Console里看结果，有树状控件</li>
+                </ul>
+            </p>
+
+            <label for="input">MessagePack 序列化后的二进制数据(Hex escape 格式):</label><br>
+            <textarea id="input" name="input" rows="10" cols="100">\x82\xa7compact\xc3\xa6schema\x00</textarea>
+            <br>
+            <input type="button" class="btn btn-primary" value="反序列化" onclick="msgpack_decode()">
+            <input type="button" class="btn btn-primary" value="清空" onclick="clear_content()">
+            <br><br>
+            <label for="output">输出:</label><br>
+            <textarea id="output" name="output" rows="20" cols="100"></textarea>
+        </div>
+    </body>
+</html>
